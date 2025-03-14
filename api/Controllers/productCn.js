@@ -1,23 +1,71 @@
 import Product from "../Models/productMd.js";
+import ApiFeatures from "../Utils/apiFeatures.js";
 import catchAsync from "../Utils/catchAsync.js";
+import HandleERROR from "../Utils/handleError.js";
+import { __dirname } from "../app.js";
+import jwt from "jsonwebtoken";
 
-export const create=catchAsync(async(req,res,next)=>{
-    const product=await Product.create({...req.body,userId:req.userId})
-        return res.status(200).json({
-            success:true,
-            data:product,
-            message:'product address successfully'
-        })
-})
-export const getAll=catchAsync(async(req,res,next)=>{
+export const create = catchAsync(async (req, res, next) => {
+  const product = await Product.create(req.body);
+  res.status(200).json({
+    success: true,
+    data: product,
+    message: "create product successfully",
+  });
+});
+export const getAll = catchAsync(async (req, res, next) => {
+    if(req.headers?.authorization.split(" ")[1]){
+        let quertString=req.query
+
+        const { role } = jwt.verify(
+            req.headers?.authorization.split(" ")[1],
+            process.env.SECRET_JWT
+          );
+          if(role!='admin'&&role!='superAdmin'){
+            quertString={...quertString,filters:{...quertString.filters,isActive:true}}
+          }
+    }
     
-})
-export const getOne=catchAsync(async(req,res,next)=>{
-    
-})
-export const update=catchAsync(async(req,res,next)=>{
-    
-})
-export const remove=catchAsync(async(req,res,next)=>{
-    
-})
+  const features = new ApiFeatures(Product, quertString)
+    .filter()
+    .sort()
+    .limitFields()
+    .paginate()
+    .populate()
+    .secondPopulate("categoryIds brandId defaultProductVariant");
+  const Products = await features.query;
+  const count = await Product.countDocuments(quertString?.filter);
+  res.status(200).json({
+    success: true,
+    data: Products,
+    count,
+  });
+});
+export const getOne = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+  const product = await Product.findById(id).populate("categoryIds brandId defaultProductVariant");
+  if(req.headers?.authorization.split(" ")[1]){
+    let quertString=req.query
+
+    const { role } = jwt.verify(
+        req.headers?.authorization.split(" ")[1],
+        process.env.SECRET_JWT
+      );
+      if(role!='admin'&&role!='superAdmin'&&!product.isActive){
+        return next(new HandleERROR("product is not available",400))
+    }
+    }
+  res.status(200).json({
+    success: true,
+    data: product,
+  });
+});
+export const update = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+  const product = await Product.findByIdAndUpdate(id, req.body, { new: true });
+  res.status(200).json({
+    success: true,
+    data: product,
+    meesage: "update product successfully",
+  });
+});

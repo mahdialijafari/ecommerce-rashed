@@ -23,7 +23,7 @@ const productSchema=new mongoose.Schema({
         type:[String],
         default:[]
     },
-    categoryId:{
+    categoryIds:{
         type:[{
             type:mongoose.Schema.Types.ObjectId,
             ref:'category'
@@ -48,6 +48,10 @@ const productSchema=new mongoose.Schema({
     rateCount:{
         type:Number,
         default:0
+    },
+    defaultProductVariant:{
+        type:mongoose.Schema.Types.ObjectId,
+        ref:'productVariant',
     }
 },{timestamps:true})
 

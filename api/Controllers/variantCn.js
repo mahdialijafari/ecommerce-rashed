@@ -1,4 +1,4 @@
-import catchAsync from "../Utils/catchAsync";
+import catchAsync from "../Utils/catchAsync.js";
 
 export const create=catchAsync(async(req,res,next)=>{
 

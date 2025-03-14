@@ -1,7 +1,7 @@
-import catchAsync from "../Utils/catchAsync";
-import Address from "../Models/addressMd";
-import ApiFeatures from "../Utils/apiFeatures";
-import HandleERROR from "../Utils/handleError";
+import catchAsync from "../Utils/catchAsync.js";
+import Address from "../Models/addressMd.js";
+import ApiFeatures from "../Utils/apiFeatures.js";
+import HandleERROR from "../Utils/handleError.js";
 
 
 export const create=catchAsync(async(req,res,next)=>{

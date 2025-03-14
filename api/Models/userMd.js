@@ -1,10 +1,12 @@
 import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema({
-    username:String,
+    firstName:String,
+    lastName:String,
+    birthDate:Date,
   phoneNumber: {
     type: String,
-    match:[],
+    match:[/^(\+98|0)?9\d{9}$/,'phone number invalid'],
     required: [true, "phone number is required"],
     unique: [true, "phone number already taken"],    
   },

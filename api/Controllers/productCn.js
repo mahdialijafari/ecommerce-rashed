@@ -1,5 +1,5 @@
-import Product from "../Models/productMd";
-import catchAsync from "../Utils/catchAsync";
+import Product from "../Models/productMd.js";
+import catchAsync from "../Utils/catchAsync.js";
 
 export const create=catchAsync(async(req,res,next)=>{
     const product=await Product.create({...req.body,userId:req.userId})

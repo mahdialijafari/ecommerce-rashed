@@ -10,7 +10,7 @@ const userSchema = new mongoose.Schema({
     required: [true, "phone number is required"],
     unique: [true, "phone number already taken"],    
   },
-  favoriteProduct: {
+  favoriteProductIds: {
     type: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Product',

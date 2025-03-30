@@ -1,4 +1,5 @@
 import Product from "../Models/productMd.js";
+import User from "../Models/userMd.js";
 import ApiFeatures from "../Utils/apiFeatures.js";
 import catchAsync from "../Utils/catchAsync.js";
 import HandleERROR from "../Utils/handleError.js";
@@ -44,20 +45,25 @@ export const getAll = catchAsync(async (req, res, next) => {
 export const getOne = catchAsync(async (req, res, next) => {
   const { id } = req.params;
   const product = await Product.findById(id).populate("categoryIds brandId defaultProductVariant");
+  let favoriteProduct=false
   if(req.headers?.authorization.split(" ")[1]){
-    let quertString=req.query
-
-    const { role } = jwt.verify(
+    const { id:userId,role } = jwt.verify(
         req.headers?.authorization.split(" ")[1],
         process.env.SECRET_JWT
       );
       if(role!='admin'&&role!='superAdmin'&&!product.isActive){
         return next(new HandleERROR("product is not available",400))
     }
+    const user=await User.findById(userId)
+    const fav=user?.favoriteProductIds?.find((e)=>e==id)
+    if(fav){
+        favoriteProduct=true
+    }
     }
   res.status(200).json({
     success: true,
     data: product,
+    favoriteProduct
   });
 });
 export const update = catchAsync(async (req, res, next) => {

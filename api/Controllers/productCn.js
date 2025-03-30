@@ -16,14 +16,14 @@ export const create = catchAsync(async (req, res, next) => {
 });
 export const getAll = catchAsync(async (req, res, next) => {
     if(req.headers?.authorization.split(" ")[1]){
-        let quertString=req.query
+        let queryString=req.query
 
         const { role } = jwt.verify(
             req.headers?.authorization.split(" ")[1],
             process.env.SECRET_JWT
           );
           if(role!='admin'&&role!='superAdmin'){
-            quertString={...quertString,filters:{...quertString.filters,isActive:true}}
+            queryString={...quertString,filters:{...queryString.filters,isActive:true}}
           }
     }
     
@@ -35,7 +35,7 @@ export const getAll = catchAsync(async (req, res, next) => {
     .populate()
     .secondPopulate("categoryIds brandId defaultProductVariant");
   const Products = await features.query;
-  const count = await Product.countDocuments(quertString?.filter);
+  const count = await Product.countDocuments(queryString?.filter);
   res.status(200).json({
     success: true,
     data: Products,

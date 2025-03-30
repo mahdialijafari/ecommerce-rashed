@@ -16,17 +16,26 @@ const variantSchema=new mongoose.Schema({
     },
     variantId:{
         type: mongoose.Schema.Types.ObjectId,
-        required:[true,'variantId is required'],
+        ref:'Variant',
+        required:[true,'variant is required'],
     },
     productId:{
         type: mongoose.Schema.Types.ObjectId,
-        required:[true,'productId is required'],
+        ref:'Product',
+        required:[true,'product is required'],
     },
     disscount:{
         type:Number,
         required:[true,'disscount is required'],
+        default:0,
+        min:0,
+        max:100,
     },
-    
+    isActive:{
+        type:Boolean,
+        default:true,
+    },
+
 },{timestamps:true})
 
 const ProductVariant=mongoose.model("ProductVariant",variantSchema);

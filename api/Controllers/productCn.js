@@ -15,33 +15,25 @@ export const create = catchAsync(async (req, res, next) => {
   });
 });
 export const getAll = catchAsync(async (req, res, next) => {
+  let role=null
     if(req.headers?.authorization.split(" ")[1]){
-        let queryString=req.query
-
-        const { role } = jwt.verify(
+        role = jwt.verify(
             req.headers?.authorization.split(" ")[1],
             process.env.SECRET_JWT
-          );
-          if(role!='admin'&&role!='superAdmin'){
-            queryString={...quertString,filters:{...queryString.filters,isActive:true}}
-          }
+          ).role;
     }
     
-  const features = new ApiFeatures(Product, quertString)
+const featires = new ApiFeatures(Product, req.query,role)
     .filter()
     .sort()
     .limitFields()
     .paginate()
-    .populate()
-    .secondPopulate("categoryIds brandId defaultProductVariant");
-  const Products = await features.query;
-  const count = await Product.countDocuments(queryString?.filter);
-  res.status(200).json({
-    success: true,
-    data: Products,
-    count,
-  });
+    .populate('categoryIds brandId defaultProductVariant')
+    .addManualFilter(role!='admin'&&role!='superAdmin'?{isActive:true}:null)
+  const resData = await featires.execute();
+  return res.status(200).json(resData);
 });
+
 export const getOne = catchAsync(async (req, res, next) => {
   const { id } = req.params;
   const product = await Product.findById(id).populate("categoryIds brandId defaultProductVariant");

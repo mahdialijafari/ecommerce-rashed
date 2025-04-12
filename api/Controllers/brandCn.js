@@ -15,19 +15,14 @@ export const create = catchAsync(async (req, res, next) => {
   });
 });
 export const getAll = catchAsync(async (req, res, next) => {
-  const features = new ApiFeatures(Brand, req?.quary)
+  const featires = new ApiFeatures(Brand, req.query,req?.role)
     .filter()
     .sort()
     .limitFields()
     .paginate()
     .populate()
-  const brands = await features.query;
-  const count = await Brand.countDocuments(req?.quary?.filter);
-  res.status(200).json({
-    success: true,
-    data: brands,
-    count,
-  });
+  const resData = await featires.execute();
+  return res.status(200).json(resData);
 });
 export const getOne = catchAsync(async (req, res, next) => {
   const { id } = req.params;

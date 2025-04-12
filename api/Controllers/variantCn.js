@@ -11,19 +11,14 @@ export const create = catchAsync(async (req, res, next) => {
   });
 });
 export const getAll = catchAsync(async (req, res, next) => {
-  const features = new ApiFeatures(Variant, req?.quary)
-    .filter()
-    .sort()
-    .limitFields()
-    .paginate()
-    .populate();
-  const variants = await features.query;
-  const count = await Variant.countDocuments(req?.quary?.filter);
-  res.status(200).json({
-    success: true,
-    data: variants,
-    count,
-  });
+  const featires = new ApiFeatures(Variant, req.query,req.role)
+      .filter()
+      .sort()
+      .limitFields()
+      .paginate()
+      .populate()
+    const resData = await featires.execute();
+    return res.status(200).json(resData);
 });
 export const getOne = catchAsync(async (req, res, next) => {
   const { id } = req.params;

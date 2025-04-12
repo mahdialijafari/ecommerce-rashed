@@ -7,11 +7,12 @@ import { __dirname } from "../app.js";
 import jwt from "jsonwebtoken";
 
 export const create = catchAsync(async (req, res, next) => {
-  await Rate.create({productId:product._id})
   const product = await Product.create(req.body);
+  const rt=await Rate.create({productId:product._id})
+  const newpr=await Product.findByIdAndUpdate(product._id,{rateId:rt._id})
   res.status(200).json({
     success: true,
-    data: product,
+    data: newpr,
     message: "create product successfully",
   });
 });
@@ -29,7 +30,7 @@ const featires = new ApiFeatures(Product, req.query,role)
     .sort()
     .limitFields()
     .paginate()
-    .populate('categoryIds brandId defaultProductVariant')
+    .populate('categoryIds brandId defaultProductVariant rateId')
     .addManualFilter(role!='admin'&&role!='superAdmin'?{isActive:true}:null)
   const resData = await featires.execute();
   return res.status(200).json(resData);
@@ -37,7 +38,7 @@ const featires = new ApiFeatures(Product, req.query,role)
 
 export const getOne = catchAsync(async (req, res, next) => {
   const { id } = req.params;
-  const product = await Product.findById(id).populate("categoryIds brandId defaultProductVariant");
+  const product = await Product.findById(id).populate("categoryIds brandId defaultProductVariant rateId");
   let favoriteProduct=false
   if(req.headers?.authorization.split(" ")[1]){
     const { id:userId,role } = jwt.verify(

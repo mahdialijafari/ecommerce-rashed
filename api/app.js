@@ -21,6 +21,7 @@ import userRouter from './Routes/user.js'
 import variantRouter from './Routes/variant.js'
 import { isLogin } from './Middlewares/isLogin.js'
 import cors from 'cors'
+import rateRouter from './Routes/rate.js'
 
 const __filename=fileURLToPath(import.meta.url)
 export const __dirname=path.dirname(__filename)
@@ -42,6 +43,7 @@ app.use('/api/order',orderRouter)
 app.use('/api/product',productRouter)
 app.use('/api/product-variant',productVariantRouter)
 app.use('/api/report',reportRouter)
+app.use('/api/rate',rateRouter)
 app.use('/api/slider',sliderRouter)
 app.use('/api/user',isLogin,userRouter)
 app.use('/api/variant',variantRouter)

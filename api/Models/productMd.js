@@ -42,7 +42,11 @@ const productSchema=new mongoose.Schema({
     defaultProductVariant:{
         type:mongoose.Schema.Types.ObjectId,
         ref:'productVariant',
-    }
+    },
+    rateId:{
+        type:mongoose.Schema.Types.ObjectId,
+        ref:'Rate',
+    },
 },{timestamps:true})
 
 const Product=mongoose.model("Product",productSchema);

@@ -7,6 +7,7 @@ import { __dirname } from "../app.js";
 import jwt from "jsonwebtoken";
 
 export const create = catchAsync(async (req, res, next) => {
+  await Rate.create({productId:product._id})
   const product = await Product.create(req.body);
   res.status(200).json({
     success: true,

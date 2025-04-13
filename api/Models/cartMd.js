@@ -1,16 +1,35 @@
 import mongoose from "mongoose";
 
-const brandSchema = new mongoose.Schema({
-  title: {
-    type: String,
-    required: [true, "title is required"],
+const itemSchema = new mongoose.Schema({
+  productId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Product",
   },
-  image: {
-    type: String,
-    required: [true, "image is required"],
+  productVariantId:{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'ProductVariant',
   },
-},{timestamps:true});
+  categoryId:{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Category',
+  },
+  quantity:{
+    type: Number,
+    default:1
+  }
+},{_id:false});
 
 
-const Brand=mongoose.model("Brand",brandSchema)
-export default Brand
+const cartSchema = new mongoose.Schema({
+  items:{
+    type:[itemSchema],
+    default:[]
+  },
+  totalPrice:{
+    default:0,
+    type:Number
+  }
+});
+
+const Cart = mongoose.model("Cart", cartSchema);
+export default Cart;

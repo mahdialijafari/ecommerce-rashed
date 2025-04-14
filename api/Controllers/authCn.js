@@ -1,3 +1,4 @@
+import Cart from "../Models/cartMd.js";
 import User from "../Models/userMd.js";
 import catchAsync from "../Utils/catchAsync.js";
 import HandleERROR from "../Utils/handleError.js";
@@ -47,6 +48,7 @@ export const checkOtp = catchAsync(async (req, res, next) => {
   let isNewAccount=false
   if (!user) {
     user = await User.create({ phoneNumber });
+    await Cart.create({totalPrice:0,items:[],userId:user._id})
     isNewAccount=true
   } 
   const token=generateToken(user)
@@ -54,6 +56,7 @@ export const checkOtp = catchAsync(async (req, res, next) => {
     success: true,
     message: "login successful",
     data: {
+      isNewAccount,
       user:{
         _id:user._id,
         phoneNumber:user.phoneNumber,

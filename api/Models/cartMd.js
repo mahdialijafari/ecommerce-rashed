@@ -16,6 +16,9 @@ const itemSchema = new mongoose.Schema({
   quantity:{
     type: Number,
     default:1
+  },
+  price:{
+    type: Number,
   }
 },{_id:false});
 
@@ -28,6 +31,10 @@ const cartSchema = new mongoose.Schema({
   totalPrice:{
     default:0,
     type:Number
+  },
+  userId:{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
   }
 });
 

@@ -24,9 +24,15 @@ export const add=catchAsync(async(req,res,next)=>{
         return true
     })
     if(!add){
-
-        cart.items.push({productVariantId,quantity:1})
+        cart.totalPrice+=productVariant.finalPrice
+        cart.items.push({categoryId,productVariantId,productId,quantity:1,price:productVariant.finalPrice})
     }
+    const newCart=await cart.save()
+    return res.status(200).json({
+        success:true,
+        data:newCart,
+        message:'cart updated'
+    })
 })
 export const remove=catchAsync(async(req,res,next)=>{
     const {productVariantId=null}=req.body
@@ -41,10 +47,10 @@ export const remove=catchAsync(async(req,res,next)=>{
         }
         return true
     })
-    await cart.save()
+    const newCart=await cart.save()
     return res.status(200).json({
         success:true,
-        data:cart,
+        data:newCart,
         message:'cart updated'
     })
 })

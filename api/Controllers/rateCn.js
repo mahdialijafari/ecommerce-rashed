@@ -13,7 +13,7 @@ export const create = catchAsync(async (req, res, next) => {
   if(rate.userIds.includes(req.userId)){
     return next(new HandleERROR('you have rated this product',400))
 }
-rate.userId.push(req.userId)
+rate.userIds.push(req.userId)
 let rtCount=rate.rateCount
 let totalRate=rtCount*rate.rate+req.body.rate
 rate.rate=totalRate/(rtCount+1)
@@ -23,13 +23,5 @@ const newRate=await rate.save()
     success: true,
     data: category,
     message: "rated successfully",
-  });
-});
-export const getOne = catchAsync(async (req, res, next) => {
-  const { id } = req.params;
-  const category = await Category.findById(id).populate("parentCategoryId");
-  res.status(200).json({
-    success: true,
-    data: category,
   });
 });

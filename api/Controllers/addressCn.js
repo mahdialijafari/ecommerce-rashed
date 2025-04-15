@@ -12,17 +12,17 @@ export const create = catchAsync(async (req, res, next) => {
   });
 });
 export const getAll = catchAsync(async (req, res, next) => {
-  const featires = new ApiFeatures(Address, req.query,req?.role)
+  const featires = new ApiFeatures(Address, req.query, req?.role)
+    .addManualFilters(
+      req.role !== "admin" && req.role !== "superAdmin"
+        ? { userId: req.userId }
+        : null
+    )
     .filter()
     .sort()
     .limitFields()
     .paginate()
-    .populate()
-    .addManualFilter(
-      req.role !== "admin" && req.role !== "superAdmin"
-        ? { userId: req.userId }
-        : null
-    );
+    .populate();
   const resData = await featires.execute();
   return res.status(200).json(resData);
 });

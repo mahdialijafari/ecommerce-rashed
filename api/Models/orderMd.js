@@ -6,7 +6,7 @@ const orderSchema=new mongoose.Schema({
     totalPriceAfterDiscount:{
         type:Number,
     },
-    discount:{
+    discountId:{
         type:mongoose.Schema.Types.ObjectId,
         ref:'DiscountCode'
     },
@@ -20,7 +20,7 @@ const orderSchema=new mongoose.Schema({
     },
     status:{
         type:String,
-        enum:['pending','success','failed']
+        enum:['pending','success','failed'],
     },
     authority:{
         type:String,

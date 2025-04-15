@@ -1,6 +1,7 @@
 import express from 'express'
+import { search } from '../Controllers/searchCn'
 
-const rateRouter=express.Router()
-rateRouter.route('/')
+const searchRouter=express.Router()
+searchRouter.route('/').post(search)
 
-export default rateRouter
+export default searchRouter

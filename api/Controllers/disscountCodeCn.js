@@ -24,7 +24,7 @@ export const checkCode = (discount, totalPrice, userId) => {
   } else if (stTime > now) {
     err = "discount code is not valid for this price";
   }
-  return { success: !err, message: err };
+  return { success: !err, error: err };
 };
 
 export const create = catchAsync(async (req, res, next) => {
@@ -87,7 +87,7 @@ export const check = catchAsync(async (req, res, next) => {
   const discount = await DiscountCode.findOne({ code });
   const checking = checkCode(discount, totalPrice, req.userId);
   if (!checking.success) {
-    return next(new HandleERROR(checkCode.message, 400));
+    return next(new HandleERROR(checkCode.error, 400));
   }
   return res.status(200).json({
     success: true,

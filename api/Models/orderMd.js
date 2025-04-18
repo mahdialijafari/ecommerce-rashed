@@ -21,6 +21,7 @@ const orderSchema=new mongoose.Schema({
     status:{
         type:String,
         enum:['pending','success','failed'],
+        default:'pending'
     },
     authority:{
         type:String,

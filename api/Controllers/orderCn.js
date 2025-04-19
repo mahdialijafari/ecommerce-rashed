@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Cart from "../Models/cartMd.js";
 import DiscountCode from "../Models/disscountCodeMd.js";
 import Order from "../Models/orderMd.js";
@@ -6,11 +7,64 @@ import { ApiFeatures } from "../Utils/apiFeatures.js";
 import catchAsync from "../Utils/catchAsync.js";
 import HandleERROR from "../Utils/handleError.js";
 import { checkCode } from "./disscountCodeCn.js";
+import User from "../Models/userMd.js";
 
 export const payment = catchAsync(async (req, res, next) => {
   const { discountCode = null, addressId = null } = req.body;
   const userId = req.userId;
+  const objectUserId=mongoose.Types.ObjectId(userId)
   const cart = await Cart.findOne({ userId });
+
+  const aggregatedCart = await Cart.aggregate([
+    { $match: { userId: objectUserId } },
+
+    { $unwind: { path: "$items", preserveNullAndEmptyArrays: true } },
+
+    {
+      $lookup: {
+        from: "Product",
+        localField: "items.productId",
+        foreignField: "_id",
+        as: "items.product"
+      }
+    },
+    // Unwind the product array returned by the lookup.
+    { $unwind: { path: "$items.product", preserveNullAndEmptyArrays: true } },
+
+    // 4. Lookup the ProductVariant document for each item.
+    {
+      $lookup: {
+        from: "ProductVariant", // Adjust as necessary.
+        localField: "items.productVariantId",
+        foreignField: "_id",
+        as: "items.productVariant"
+      }
+    },
+    { $unwind: { path: "$items.productVariant", preserveNullAndEmptyArrays: true } },
+
+    // 5. Lookup the Category document for each item.
+    {
+      $lookup: {
+        from: "Category", // Adjust as necessary.
+        localField: "items.categoryId",
+        foreignField: "_id",
+        as: "items.category"
+      }
+    },
+    { $unwind: { path: "$items.category", preserveNullAndEmptyArrays: true } },
+
+    // 6. Group the individual items back into the cart.
+    {
+      $group: {
+        _id: "$_id",
+        userId: { $first: "$userId" },
+        totalPrice: { $first: "$totalPrice" },
+        items: { $push: "$items" }
+      }
+    }
+  ]);
+
+
   let listOfProductId = [];
   let discount;
   if (addressId) {
@@ -73,7 +127,21 @@ export const payment = catchAsync(async (req, res, next) => {
     addressId,
     discountId: discount?._id,
     authority,
+    items:aggregatedCart?.items
   });
+  const user=await User.findById(userId)
+  user.boughtProductIds=[...user.boughtProductIds,...listOfProductId]
+  await user.save()
+  if(discount?._id){
+    await DiscountCode.findOneAndUpdate({code:discountCode},{$pull:{userIdUsed:userId}})
+  }
+  cart.items=[]
+  cart.totalPrice=0
+  await cart.save()
+  return res.status(200).json({
+    success:true,
+    data:{paymentGateway}
+  })
 });
 export const getAll = catchAsync(async (req, res, next) => {
   const featires = new ApiFeatures(Order, req.query, req?.role)

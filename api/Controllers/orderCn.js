@@ -9,17 +9,29 @@ import HandleERROR from "../Utils/handleError.js";
 import { checkCode } from "./disscountCodeCn.js";
 import User from "../Models/userMd.js";
 
+// Mock Zarinpal verification function
+const verifyZarinpal = async (authority) => {
+  if (authority === "valid-authority") {
+    return { success: true };
+  } else {
+    return { success: false };
+  }
+};
+
 export const payment = catchAsync(async (req, res, next) => {
   const { discountCode = null, addressId = null } = req.body;
   const userId = req.userId;
-  const objectUserId=mongoose.Types.ObjectId(userId)
+  const objectUserId = mongoose.Types.ObjectId(userId);
+
   const cart = await Cart.findOne({ userId });
+
+  if (!cart || cart.items.length === 0) {
+    return next(new HandleERROR("Cart is empty", 400));
+  }
 
   const aggregatedCart = await Cart.aggregate([
     { $match: { userId: objectUserId } },
-
     { $unwind: { path: "$items", preserveNullAndEmptyArrays: true } },
-
     {
       $lookup: {
         from: "Product",
@@ -28,32 +40,25 @@ export const payment = catchAsync(async (req, res, next) => {
         as: "items.product"
       }
     },
-    // Unwind the product array returned by the lookup.
     { $unwind: { path: "$items.product", preserveNullAndEmptyArrays: true } },
-
-    // 4. Lookup the ProductVariant document for each item.
     {
       $lookup: {
-        from: "ProductVariant", // Adjust as necessary.
+        from: "ProductVariant",
         localField: "items.productVariantId",
         foreignField: "_id",
         as: "items.productVariant"
       }
     },
     { $unwind: { path: "$items.productVariant", preserveNullAndEmptyArrays: true } },
-
-    // 5. Lookup the Category document for each item.
     {
       $lookup: {
-        from: "Category", // Adjust as necessary.
+        from: "Category",
         localField: "items.categoryId",
         foreignField: "_id",
         as: "items.category"
       }
     },
     { $unwind: { path: "$items.category", preserveNullAndEmptyArrays: true } },
-
-    // 6. Group the individual items back into the cart.
     {
       $group: {
         _id: "$_id",
@@ -64,62 +69,68 @@ export const payment = catchAsync(async (req, res, next) => {
     }
   ]);
 
-
-  let listOfProductId = [];
-  let discount;
-  if (addressId) {
-    return next(new HandleERROR("address required", 400));
+  if (!addressId) {
+    return next(new HandleERROR("Address is required", 400));
   }
+
+  let discount;
   if (discountCode) {
-    let discountData = await DiscountCode.findOne({ code: discountCode });
+    const discountData = await DiscountCode.findOne({ code: discountCode });
     const checkDiscount = checkCode(discountData, cart.totalPrice, userId);
     if (!checkDiscount.success || !discountData) {
-      return next(new HandleERROR(checkDiscount?.error, 400));
+      return next(new HandleERROR(checkDiscount?.error || "Invalid discount code", 400));
     }
     discount = discountData;
   }
+
+  let listOfProductId = [];
   let totalPrice = cart.totalPrice;
   let change = false;
   let newItems = [];
   let newTotalPrice = 0;
+
   for (let item of cart.items) {
     listOfProductId.push(item.productId);
-    let productVariant = await ProductVariant.findById(item.productVariantId);
+    const productVariant = await ProductVariant.findById(item.productVariantId);
+    if (!productVariant) {
+      return next(new HandleERROR("Product variant not found", 400));
+    }
     if (item.quantity > productVariant.quantity) {
       item.quantity = productVariant.quantity;
       change = true;
     }
-    if (productVariant.finalPrice != item.price) {
+    if (productVariant.finalPrice !== item.price) {
       item.price = productVariant.finalPrice;
       change = true;
     }
-    newTotalPrice += item.price;
+    newTotalPrice += item.price * item.quantity;
     newItems.push(item);
   }
+
   if (change) {
     cart.items = newItems;
     cart.totalPrice = newTotalPrice;
     const newCart = await cart.save();
-    return res.status(400).json({
-      message: "cart has been update",
-      success: false,
-      data: newCart,
-    });
+    return next(new HandleERROR("Cart has been updated, please try again", 400));
   }
+
   let percent;
   if (discount) {
     percent = discount.percent;
   }
-  let totalPriceAfterDiscount = percent
+
+  const totalPriceAfterDiscount = percent
     ? newTotalPrice * (1 - percent / 100)
     : newTotalPrice;
-  // zarinpal request
+
   const responseZarinpal = 100;
-  if (responseZarinpal != 100) {
-    return next(new HandleERROR("payment gateway not response", 500));
+  if (responseZarinpal !== 100) {
+    return next(new HandleERROR("Payment gateway not responding", 500));
   }
-  const authority = "00000000000000000844574684348";
-  const paymentGateway = "from zarinpal request";
+
+  const authority = "valid-authority";
+  const paymentGateway = "from zarinpal mock request";
+
   const order = await Order.create({
     totalPrice: newTotalPrice,
     totalPriceAfterDiscount,
@@ -127,24 +138,33 @@ export const payment = catchAsync(async (req, res, next) => {
     addressId,
     discountId: discount?._id,
     authority,
-    items:aggregatedCart?.items
+    items: aggregatedCart[0]?.items,
+    paymentStatus: "pending"
   });
-  const user=await User.findById(userId)
-  user.boughtProductIds=[...user.boughtProductIds,...listOfProductId]
-  await user.save()
-  if(discount?._id){
-    await DiscountCode.findOneAndUpdate({code:discountCode},{$pull:{userIdUsed:userId}})
+
+  const user = await User.findById(userId);
+  if (!user) {
+    return next(new HandleERROR("User not found", 400));
   }
-  cart.items=[]
-  cart.totalPrice=0
-  await cart.save()
+  user.boughtProductIds = [...user.boughtProductIds, ...listOfProductId];
+  await user.save();
+
+  if (discount?._id) {
+    await DiscountCode.findOneAndUpdate({ code: discountCode }, { $pull: { userIdUsed: userId } });
+  }
+
+  cart.items = [];
+  cart.totalPrice = 0;
+  await cart.save();
+
   return res.status(200).json({
-    success:true,
-    data:{paymentGateway}
-  })
+    success: true,
+    data: { paymentGateway }
+  });
 });
+
 export const getAll = catchAsync(async (req, res, next) => {
-  const featires = new ApiFeatures(Order, req.query, req?.role)
+  const features = new ApiFeatures(Order, req.query, req?.role)
     .addManualFilters(
       req.role !== "admin" && req.role !== "superAdmin"
         ? { userId: req.userId }
@@ -155,18 +175,134 @@ export const getAll = catchAsync(async (req, res, next) => {
     .limitFields()
     .paginate()
     .populate();
-  const resData = await featires.execute();
+
+  const resData = await features.execute();
   return res.status(200).json(resData);
 });
+
 export const getOne = catchAsync(async (req, res, next) => {
   const { id } = req.params;
   const userId = req.userId;
-  const order = await Order.findOne({ _id: id, userId }).populate(
-    req?.query?.populate
-  );
+
+  const order = await Order.findOne({ _id: id, userId }).populate(req?.query?.populate);
+  if (!order) {
+    return next(new HandleERROR("Order not found", 404));
+  }
+
   return res.status(200).json({
     status: "success",
     data: order,
   });
 });
-export const checkPayment = catchAsync(async (req, res, next) => {});
+
+export const checkPayment = catchAsync(async (req, res, next) => {
+  const { authority } = req.body;
+  const userId = req.userId;
+
+  if (!authority) {
+    return next(new HandleERROR("Authority is required", 400));
+  }
+
+  const order = await Order.findOne({ authority, userId });
+  if (!order) {
+    return next(new HandleERROR("Order not found", 404));
+  }
+
+  if (order.paymentStatus !== "pending") {
+    return next(new HandleERROR("Payment already checked", 400));
+  }
+
+  const result = await verifyZarinpal(authority);
+
+  if (result.success) {
+    order.paymentStatus = "success";
+    await order.save();
+    return res.status(200).json({
+      success: true,
+      message: "Payment verified successfully"
+    });
+  } else {
+    order.paymentStatus = "failed";
+    await order.save();
+
+    const cart = await Cart.findOne({ userId });
+    if (cart) {
+      cart.items.push(...order.items);
+      cart.totalPrice = cart.items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+      await cart.save();
+    }
+
+    if (order.discountId) {
+      await DiscountCode.findByIdAndUpdate(order.discountId, { $push: { userIdUsed: userId } });
+    }
+
+    const user = await User.findById(userId);
+    if (user) {
+      user.boughtProductIds = user.boughtProductIds.filter(
+        id => !order.items.find(item => item.productId.toString() === id.toString())
+      );
+      await user.save();
+    }
+
+    for (const item of order.items) {
+      await ProductVariant.findByIdAndUpdate(item.productVariantId, {
+        $inc: { quantity: item.quantity }
+      });
+    }
+
+    return next(new HandleERROR("Payment failed and cart restored", 400));
+  }
+});
+
+export const checkPendingOrders = catchAsync(async (req, res, next) => {
+  const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+
+  const pendingOrders = await Order.find({
+    paymentStatus: "pending",
+    createdAt: { $lte: tenMinutesAgo }
+  });
+
+  for (const order of pendingOrders) {
+    const result = await verifyZarinpal(order.authority);
+
+    if (result.success) {
+      order.paymentStatus = "success";
+      await order.save();
+    } else {
+      order.paymentStatus = "failed";
+      await order.save();
+
+      const userId = order.userId;
+
+      const cart = await Cart.findOne({ userId });
+      if (cart) {
+        cart.items.push(...order.items);
+        cart.totalPrice = cart.items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+        await cart.save();
+      }
+
+      if (order.discountId) {
+        await DiscountCode.findByIdAndUpdate(order.discountId, { $push: { userIdUsed: userId } });
+      }
+
+      const user = await User.findById(userId);
+      if (user) {
+        user.boughtProductIds = user.boughtProductIds.filter(
+          id => !order.items.find(item => item.productId.toString() === id.toString())
+        );
+        await user.save();
+      }
+
+      for (const item of order.items) {
+        await ProductVariant.findByIdAndUpdate(item.productVariantId, {
+          $inc: { quantity: item.quantity }
+        });
+      }
+    }
+  }
+
+  return res.status(200).json({
+    success: true,
+    message: `${pendingOrders.length} pending orders checked`
+  });
+});

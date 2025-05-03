@@ -1,5 +1,5 @@
 import express from 'express'
-import { add, getOne, remove } from '../Controllers/cartCn'
+import { add, clear, getOne, remove } from '../Controllers/cartCn.js'
 
 const cartRouter=express.Router()
 cartRouter.route('/').get(getOne).post(add).delete(clear)

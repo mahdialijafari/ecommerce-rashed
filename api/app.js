@@ -23,9 +23,29 @@ import { isLogin } from './Middlewares/isLogin.js'
 import cors from 'cors'
 import rateRouter from './Routes/rate.js'
 import searchRouter from './Routes/search.js'
+import swaggerJSDoc from 'swagger-jsdoc'
+import swaggerUi from 'swagger-ui-express'
 
 const __filename=fileURLToPath(import.meta.url)
 export const __dirname=path.dirname(__filename)
+const option={
+   definition:{
+      openapi:'3.0.0',
+      info:{
+         title:'Rashed e-commenrce',
+         version:'1.0.0',
+         description:'class 12 rashed e-commerce project'
+      },
+      server:[
+         {
+            url:'http://localhost:5010'
+
+         }         
+      ]
+   },
+   apis:['./Routes/*.js']
+}
+const swaggerSpec=swaggerJSDoc(option)
 
 
 const app=express()
@@ -33,6 +53,7 @@ app.use(morgan('dev'))
 app.use(cors())
 app.use(express.json())
 app.use(express.static('Public'))
+app.use('/api-docs',swaggerUi.serve,swaggerUi.setup(swaggerSpec))
 app.use('/api/address',isLogin,addressRouter)
 app.use('/api/auth',authRouter)
 app.use('/api/brand',brandRouter)

@@ -26,14 +26,14 @@ const productSchema=new mongoose.Schema({
     categoryIds:{
         type:[{
             type:mongoose.Schema.Types.ObjectId,
-            ref:'category'
+            ref:'Category'
         }],
         default:[]
     },
     brandId:{
         type:mongoose.Schema.Types.ObjectId,
-        ref:'Category',
-        required:[true,'category is required']
+        ref:'Brand',
+        required:[true,'beand is required']
     },
     isActive:{
         type:Boolean,
